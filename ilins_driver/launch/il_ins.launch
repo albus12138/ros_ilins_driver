@@ -1,0 +1,8 @@
+<launch>
+  <node  name="ilins_node" pkg="ilins_driver" type="ilins_node" output="screen" >
+    <param name="NMEA_serial_port" value="/dev/pts/21"/>
+    <param name="NMEA_baudrate" value="115200"/>
+    <param name="deviceName" value="Intertial Labs INS"/>
+    <!--param name="pcap" value="path_to_pcap"/-->
+  </node>
+</launch>
