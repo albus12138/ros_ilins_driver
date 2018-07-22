@@ -1,8 +1,14 @@
 <launch>
   <node  name="ilins_node" pkg="ilins_driver" type="ilins_node" output="screen" >
-    <param name="NMEA_serial_port" value="/dev/pts/21"/>
-    <param name="NMEA_baudrate" value="115200"/>
+    <param name="NMEA_serial_port" value="/dev/pts/20"/>
+    <param name="NMEA_baudrate" value="230400"/>
+    <!--param name="NMEA_dump_file" value="~/NMEA_dump_file.nmea"/-->
+
+    <param name="OPVT2A_serial_port" value="/dev/pts/20"/>
+    <param name="OPVT2A_baudrate" value="230400"/>
+    <!--param name="OPVT2A_dump_file" value="~/OPVT2A_dump_file.bin"/-->
+
     <param name="deviceName" value="Intertial Labs INS"/>
-    <!--param name="pcap" value="path_to_pcap"/-->
+    <param name="protocol" value="OPVT2A"/>   <!--NMEA or OPVT2A-->
   </node>
 </launch>

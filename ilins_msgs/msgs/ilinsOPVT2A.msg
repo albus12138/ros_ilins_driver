@@ -23,33 +23,56 @@
 #
 ###########################################################################
 #
-# Last revision: July 18, 2018
+# Last revision: July 22, 2018
 #
 # For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 #
 ###########################################################################
 
-string message_id
+uint16 heading
+int16 pitch
+int16 roll
 
-float64 latitude
-char latitude_dir
+int16 gyroX
+int16 gyroY
+int16 gyroZ
 
-float64 longitude
-char longitude_dir
+int16 accX
+int16 accY
+int16 accZ
 
-float64 altitude
-char altitude_type
+int16 magX
+int16 magY
+int16 magZ
 
-float64 roll
-float64 pitch
-float64 heading
+uint16 usw
+uint16 voltage
+int16 temperature
 
-uint64 timestamp
+int32 latitude
+int32 longitude
+int32 altitude
 
-float64 temperature
+int32 east_speed
+int32 north_speed
+int32 vertical_speed
 
-float64 voltage
-
-string status
-
-uint32 checksum
+int32 GNSS_latitude
+int32 GNSS_longitude
+int32 GNSS_altitude
+int32 GNSS_horizontal_speed
+int16 track_over_ground
+int32 GNSS_vertical_speed
+uint32 timestamp
+uint8 GNSS_info1
+uint8 GNSS_info2
+uint8 solnSVs
+uint16 V_latency
+uint8 angle_position_type
+uint16 GNSS_heading
+int16 GNSS_pitch
+uint16 GNSS_STD_heading
+uint16 GNSS_STD_pitch
+uint16 P_bar
+int32 H_bar
+uint8 New_GPS

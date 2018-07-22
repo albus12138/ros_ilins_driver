@@ -1,4 +1,4 @@
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++17)
 
 add_library(ilins_serialport serialport.cpp)
 target_link_libraries(ilins_serialport

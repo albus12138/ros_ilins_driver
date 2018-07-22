@@ -1,20 +1,66 @@
+/*
+***************************************************************************
+*
+* Author: r4phael
+*
+* Copyright (C) 2018 r4phael
+*
+* Email: albus.zly@gmail.com
+*
+***************************************************************************
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*
+***************************************************************************
+*
+* Last revision: July 22, 2018
+*
+* For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
+*
+***************************************************************************
+*/
+
 #include "input.h"
 
 extern sig_atomic_t flag;
 
 namespace il_driver {
+    static int packet_size_nmea = 93;
+    static int packet_size_opvt2a = 101;
     
     Input::Input(ros::NodeHandle private_nh) :
             private_nh_(private_nh) {
-        private_nh.param("NMEA_serial_port", serial_port_, string(""));
+        string protocol_type;
+        int br;
+        private_nh.param("protocol", protocol_type, string("NMEA"));
+        ROS_INFO_STREAM("Protocol: " << protocol_type);
+
+        if (!protocol_type.compare("NMEA")) {
+            private_nh.param("NMEA_serial_port", serial_port_, string(""));
+            private_nh.param("NMEA_BaudRate", br, int(230400));
+            ROS_INFO_STREAM("NMEA");
+        } else if (!protocol_type.compare("OPVT2A")) {
+            private_nh.param("OPVT2A_serial_port", serial_port_, string(""));
+            private_nh.param("OPVT2A_BaudRate", br, int(230400));
+            ROS_INFO_STREAM("OPVT2A");
+        }
+        
+        options_.baudRate = SerialPort::BaudRateMake(br);
         if (!serial_port_.empty()) {
             ROS_INFO_STREAM("Accepting packets from serial port: " << serial_port_);
         }
-
-        int br;
-        private_nh.param("NMEA_BaudRate", br, int(115200));
         ROS_INFO_STREAM("BaudRate: " << br);
-        options_.baudRate = SerialPort::BaudRateMake(br);
     }
 
     InputSocket::InputSocket(ros::NodeHandle private_nh) :
@@ -35,22 +81,21 @@ namespace il_driver {
 
     int InputSocket::getPackage(ilins_msgs::ilinsNMEA *pkt) {
         int nbytes, checksum;
-        bool status = true;
         char *pch;
-        char raw_data[93];
+        char raw_data[packet_size_nmea];
 
         while (flag == 1) {
             do {
-                nbytes = com_.read(raw_data, 93);
+                nbytes = com_.read(raw_data, packet_size_nmea);
             } while (nbytes <= 0);
 
-            if ((size_t) nbytes == 93) {
+            if ((size_t) nbytes > 0) {
                 if (raw_data[0] != '$') return -1;
                 pch = strrchr(raw_data, '*');
                 *pch = '\0';
                 pch++;
                 pkt->checksum = strtol(pch, &pch, 16);
-                if (pkt->checksum != InputSocket::checksum(raw_data)) return -1;
+                if (pkt->checksum != InputSocket::checksum(raw_data+1)) return -1;                
 
                 pch = strtok(raw_data, ",");
                 if (pch != NULL && !strcmp(pch, "$PAPR")) {
@@ -83,6 +128,31 @@ namespace il_driver {
                     pkt->status = string(pch);
                 }
 
+                break;
+            }
+        }
+
+        if (flag == 0) {
+            abort();
+        }
+
+        return 0;
+    }
+
+    int InputSocket::getPackage(ilins_msgs::ilinsOPVT2A *pkt) {
+        int nbytes, checksum;
+        bool status = true;
+        char *pch;
+        unsigned char raw_data[packet_size_opvt2a];
+
+        while (flag == 1) {
+            do {
+                nbytes = com_.read(raw_data, packet_size_opvt2a);
+            } while (nbytes <= 0);
+
+            if ((size_t) nbytes == packet_size_opvt2a) {
+                ros::serialization::IStream in_stream(raw_data, packet_size_opvt2a);
+                ros::serialization::Serializer< ilins_msgs::ilinsOPVT2A >::read(in_stream, *pkt);
                 break;
             }
         }

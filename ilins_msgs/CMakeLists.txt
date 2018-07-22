@@ -7,6 +7,7 @@ add_message_files(
   DIRECTORY msgs
   FILES
   ilinsNMEA.msg
+  ilinsOPVT2A.msg
 )
 generate_messages(DEPENDENCIES std_msgs)
 

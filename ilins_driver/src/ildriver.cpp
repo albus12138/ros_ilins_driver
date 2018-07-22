@@ -1,9 +1,52 @@
+/*
+***************************************************************************
+*
+* Author: r4phael
+*
+* Copyright (C) 2018 r4phael
+*
+* Email: albus.zly@gmail.com
+*
+***************************************************************************
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*
+***************************************************************************
+*
+* Last revision: July 22, 2018
+*
+* For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
+*
+***************************************************************************
+*/
+
 #include "ildriver.h"
 
 namespace il_driver {
     
     ilinsDriver::ilinsDriver(ros::NodeHandle node, ros::NodeHandle private_nh) {
-        private_nh.param("NMEA_baudrate", config_.baudrate, int(115200));
+        string dump_file;
+        private_nh.param("protocol", protocol_type, string("NMEA"));
+        private_nh.param("deviceName", deviceName, string(""));
+        
+        if (!protocol_type.compare("NMEA")) {
+            private_nh.param("NMEA_baudrate", config_.baudrate, int(230400));
+            private_nh.param("NMEA_dump_file", dump_file, string(""));
+        } else if (!protocol_type.compare("OPVT2A")) {
+            private_nh.param("OPVT2A_baudrate", config_.baudrate, int(230400));
+            private_nh.param("OPVT2A_dump_file", dump_file, string(""));
+        }
         
         switch (config_.baudrate) {
         case 9600:
@@ -20,9 +63,6 @@ namespace il_driver {
             config_.max_frequency = 200;
         }
 
-        string dump_file;
-        private_nh.param("deviceName", deviceName, string(""));
-        private_nh.param("dump_file", dump_file, string(""));
         diagnostics_.setHardwareID(deviceName);
         const double diag_freq = config_.max_frequency;
         diag_max_freq_ = diag_freq;
@@ -40,19 +80,36 @@ namespace il_driver {
             input_.reset(new il_driver::InputSocket(private_nh));
         }
 
-        output_ = node.advertise<ilins_msgs::ilinsNMEA>("ilins_packets", 10);
+        if (!protocol_type.compare("NMEA")) {
+            output_ = node.advertise<ilins_msgs::ilinsNMEA>("ilins_packets", 10);
+        } else if (!protocol_type.compare("OPVT2A")) {
+            output_ = node.advertise<ilins_msgs::ilinsOPVT2A>("ilins_packets", 10);
+        }
     }
 
     bool ilinsDriver::poll(void) {
-        ilins_msgs::ilinsNMEAPtr nmea(new ilins_msgs::ilinsNMEA);
+        if (!protocol_type.compare("NMEA")) {
+            ilins_msgs::ilinsNMEAPtr pkt(new ilins_msgs::ilinsNMEA);
 
-        while (true) {
-            int rc = input_->getPackage(&(*nmea));
-            if (rc == 0) break;
+            while (true) {
+                int rc = input_->getPackage(&(*pkt));
+                if (rc == 0) break;
+            }
+
+            ROS_INFO_STREAM("Publish a packet. " << pkt->voltage);
+            output_.publish(pkt);
+
+        } else if (!protocol_type.compare("OPVT2A")) {
+            ilins_msgs::ilinsOPVT2APtr pkt(new ilins_msgs::ilinsOPVT2A);
+
+            while (true) {
+                int rc = input_->getPackage(&(*pkt));
+                if (rc == 0) break;
+            }
+
+            ROS_INFO_STREAM("Publish a packet. " << pkt->voltage);
+            output_.publish(pkt);
         }
-
-        ROS_INFO_STREAM("Publish a packet.");
-        output_.publish(nmea);
 
         //diag_topic_->tick(nmea->timestamp);
         //diagnostics_.update();
