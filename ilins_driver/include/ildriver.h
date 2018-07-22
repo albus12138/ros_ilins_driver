@@ -24,7 +24,7 @@
 *
 ***************************************************************************
 *
-* Last revision: July 22, 2018
+* Last revision: July 23, 2018
 *
 * For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 *

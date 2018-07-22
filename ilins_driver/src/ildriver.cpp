@@ -24,7 +24,7 @@
 *
 ***************************************************************************
 *
-* Last revision: July 22, 2018
+* Last revision: July 23, 2018
 *
 * For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 *
@@ -43,6 +43,7 @@ namespace il_driver {
         if (!protocol_type.compare("NMEA")) {
             private_nh.param("NMEA_baudrate", config_.baudrate, int(230400));
             private_nh.param("NMEA_dump_file", dump_file, string(""));
+            ROS_INFO_STREAM(dump_file);
         } else if (!protocol_type.compare("OPVT2A")) {
             private_nh.param("OPVT2A_baudrate", config_.baudrate, int(230400));
             private_nh.param("OPVT2A_dump_file", dump_file, string(""));
@@ -74,8 +75,8 @@ namespace il_driver {
                 FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10), 
                 TimeStampStatusParam()));
 
-        if (dump_file != "") {
-            ROS_INFO_STREAM("TODO");
+        if (!dump_file.compare("")) {
+            input_.reset(new il_driver::InputFile(private_nh, dump_file));
         } else {
             input_.reset(new il_driver::InputSocket(private_nh));
         }
@@ -96,7 +97,7 @@ namespace il_driver {
                 if (rc == 0) break;
             }
 
-            ROS_INFO_STREAM("Publish a packet. " << pkt->voltage);
+            ROS_INFO_STREAM("Publish a packet. " << pkt->timestamp);
             output_.publish(pkt);
 
         } else if (!protocol_type.compare("OPVT2A")) {
@@ -107,7 +108,7 @@ namespace il_driver {
                 if (rc == 0) break;
             }
 
-            ROS_INFO_STREAM("Publish a packet. " << pkt->voltage);
+            ROS_INFO_STREAM("Publish a packet. " << pkt->timestamp);
             output_.publish(pkt);
         }
 

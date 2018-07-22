@@ -24,7 +24,7 @@
 *
 ***************************************************************************
 *
-* Last revision: July 22, 2018
+* Last revision: July 23, 2018
 *
 * For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 *
@@ -37,6 +37,8 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
+#include <iostream>
+#include <fstream>
 #include <ros/ros.h>
 #include <ros/serialization.h>
 #include <ilins_msgs/ilinsNMEA.h>
@@ -77,6 +79,23 @@ namespace il_driver {
     private:
         SerialPort com_;
         
+    };
+
+    class InputFile : public Input {
+    public:
+        InputFile(ros::NodeHandle private_nh, string dump_file);
+
+        ~InputFile(void);
+
+        int getPackage(ilins_msgs::ilinsNMEA *pkt);
+
+        int getPackage(ilins_msgs::ilinsOPVT2A *pkt);
+    
+        int checksum(const char* s);
+
+    private:
+        ifstream in;
+        string mode;
     };
 }
 
