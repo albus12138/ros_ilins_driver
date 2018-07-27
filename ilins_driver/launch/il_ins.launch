@@ -6,15 +6,15 @@
     <!--param name="NMEA_dump_file" value="/home/r4phael/NMEA_dump_file.nmea"/-->
 
     <!-- OPVT2A Config -->
-    <param name="OPVT2A_serial_port" value="/dev/pts/20"/>
+    <param name="OPVT2A_serial_port" value="/dev/ttyUSB0"/>
     <param name="OPVT2A_baudrate" value="230400"/>
-    <!--param name="OPVT2A_dump_file" value="/home/r4phael/OPVT2A_dump_file.bin"/-->
+    <param name="OPVT2A_dump_file" value="/home/r4phael/OPVT2A_dump_file.DAT"/>
 
     <!-- Replay Config -->
-    <param name="mode" value="once"/> <!-- once or loop -->
+    <param name="mode" value="loop"/> <!-- once or loop -->
 
     <!-- General Config -->
     <param name="deviceName" value="Intertial Labs INS"/>
-    <param name="protocol" value="NMEA"/>   <!--NMEA or OPVT2A-->
+    <param name="protocol" value="OPVT2A"/>   <!--NMEA or OPVT2A-->
   </node>
 </launch>

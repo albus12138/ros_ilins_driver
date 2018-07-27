@@ -24,7 +24,7 @@
 *
 ***************************************************************************
 *
-* Last revision: July 23, 2018
+* Last revision: July 26, 2018
 *
 * For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 *
@@ -37,7 +37,7 @@ extern sig_atomic_t flag;
 
 namespace il_driver {
     static int packet_size_nmea = 93;
-    static int packet_size_opvt2a = 101;
+    static int packet_size_opvt2a = 109;
     
     Input::Input(ros::NodeHandle private_nh) :
             private_nh_(private_nh) {
@@ -276,9 +276,7 @@ namespace il_driver {
 
         while (flag == 1) {
             if (in.eof()) {
-                ROS_INFO_STREAM("1");
                 if (!mode.compare("loop")) {
-                    ROS_INFO_STREAM("2");
                     in.clear();
                     in.seekg(0, ios::beg);
                 } else {

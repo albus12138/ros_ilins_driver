@@ -24,7 +24,7 @@
 *
 ***************************************************************************
 *
-* Last revision: July 23, 2018
+* Last revision: July 26, 2018
 *
 * For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 *
@@ -75,7 +75,7 @@ namespace il_driver {
                 FrequencyStatusParam(&diag_min_freq_, &diag_max_freq_, 0.1, 10), 
                 TimeStampStatusParam()));
 
-        if (!dump_file.compare("")) {
+        if (!dump_file.empty()) {
             input_.reset(new il_driver::InputFile(private_nh, dump_file));
         } else {
             input_.reset(new il_driver::InputSocket(private_nh));
@@ -108,7 +108,7 @@ namespace il_driver {
                 if (rc == 0) break;
             }
 
-            ROS_INFO_STREAM("Publish a packet. " << pkt->timestamp);
+            ROS_INFO_STREAM("Publish a packet. " << pkt->timestamp << " " << pkt->voltage);
             output_.publish(pkt);
         }
 

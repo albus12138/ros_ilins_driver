@@ -29,57 +29,22 @@
 #
 ###########################################################################
 
-uint16 ILINS_header
-uint8 ILINS_message_type
-uint8 ILINS_data_identifier
-uint16 ILINS_payload_length
+string message_id
 
-uint16 heading
-int16 pitch
-int16 roll
+float64 utc_seconds
+string position_status
 
-int16 gyroX
-int16 gyroY
-int16 gyroZ
+float64 lat
+char lat_dir
 
-int16 accX
-int16 accY
-int16 accZ
+float64 lon
+char lon_dir
 
-int16 magX
-int16 magY
-int16 magZ
+float32 speed
+float32 track
+string date
+float32 mag_var
+string mag_var_direction
+string mode_indicator
 
-uint16 usw
-uint16 voltage
-int16 temperature
-
-int32 latitude
-int32 longitude
-int32 altitude
-
-int32 east_speed
-int32 north_speed
-int32 vertical_speed
-
-int32 GNSS_latitude
-int32 GNSS_longitude
-int32 GNSS_altitude
-int32 GNSS_horizontal_speed
-int16 track_over_ground
-int32 GNSS_vertical_speed
-uint32 timestamp
-uint8 GNSS_info1
-uint8 GNSS_info2
-uint8 solnSVs
-uint16 V_latency
-uint8 angle_position_type
-uint16 GNSS_heading
-int16 GNSS_pitch
-uint16 GNSS_STD_heading
-uint16 GNSS_STD_pitch
-uint16 P_bar
-int32 H_bar
-uint8 New_GPS
-
-uint16 checksum
+uint32 checksum
