@@ -24,7 +24,7 @@
 *
 ***************************************************************************
 *
-* Last revision: July 26, 2018
+* Last revision: July 29, 2018
 *
 * For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 *
@@ -39,15 +39,8 @@ namespace il_driver {
         string dump_file;
         private_nh.param("protocol", protocol_type, string("NMEA"));
         private_nh.param("deviceName", deviceName, string(""));
-        
-        if (!protocol_type.compare("NMEA")) {
-            private_nh.param("NMEA_baudrate", config_.baudrate, int(230400));
-            private_nh.param("NMEA_dump_file", dump_file, string(""));
-            ROS_INFO_STREAM(dump_file);
-        } else if (!protocol_type.compare("OPVT2A")) {
-            private_nh.param("OPVT2A_baudrate", config_.baudrate, int(230400));
-            private_nh.param("OPVT2A_dump_file", dump_file, string(""));
-        }
+        private_nh.param("baudrate", config_.baudrate, int(230400));
+        private_nh.param("replay_file", dump_file, string(""));
         
         switch (config_.baudrate) {
         case 9600:
@@ -68,7 +61,7 @@ namespace il_driver {
         const double diag_freq = config_.max_frequency;
         diag_max_freq_ = diag_freq;
         diag_min_freq_ = diag_freq;
-        ROS_INFO_STREAM("Expected output frequency: " << diag_freq << " Hz");
+        ROS_INFO_STREAM("Expected maximum output frequency: " << diag_freq << " Hz");
 
         using namespace diagnostic_updater;
         diag_topic_.reset(new TopicDiagnostic("ilins_packets", diagnostics_,
@@ -110,6 +103,8 @@ namespace il_driver {
 
             ROS_INFO_STREAM("Publish a packet. " << pkt->timestamp << " " << pkt->voltage);
             output_.publish(pkt);
+        } else {
+            ROS_ERROR_STREAM("Unknown protocol. Please check your lauchfile.");
         }
 
         //diag_topic_->tick(nmea->timestamp);

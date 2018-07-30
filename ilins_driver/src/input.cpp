@@ -24,7 +24,7 @@
 *
 ***************************************************************************
 *
-* Last revision: July 26, 2018
+* Last revision: July 29, 2018
 *
 * For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 *
@@ -39,35 +39,63 @@ namespace il_driver {
     static int packet_size_nmea = 93;
     static int packet_size_opvt2a = 109;
     
-    Input::Input(ros::NodeHandle private_nh) :
+    Input::Input(ros::NodeHandle private_nh, string mode) :
             private_nh_(private_nh) {
-        string protocol_type;
         int br;
         private_nh.param("protocol", protocol_type, string("NMEA"));
-        ROS_INFO_STREAM("Protocol: " << protocol_type);
+        ROS_INFO_STREAM("Current protocol: " << protocol_type);
 
-        if (!protocol_type.compare("NMEA")) {
-            private_nh.param("NMEA_serial_port", serial_port_, string(""));
-            private_nh.param("NMEA_BaudRate", br, int(230400));
-            ROS_INFO_STREAM("NMEA");
-        } else if (!protocol_type.compare("OPVT2A")) {
-            private_nh.param("OPVT2A_serial_port", serial_port_, string(""));
-            private_nh.param("OPVT2A_BaudRate", br, int(230400));
-            ROS_INFO_STREAM("OPVT2A");
+        if (!mode.compare("online")) {
+            private_nh.param("serial_port", serial_port_, string(""));
+            private_nh.param("baudrate", br, int(230400));
+            
+            options_.baudRate = SerialPort::BaudRateMake(br);
+
+            if (!serial_port_.empty()) {
+                ROS_INFO_STREAM("Accepting packets from serial port: " << serial_port_);
+            }
+
+            ROS_INFO_STREAM("BaudRate: " << br);
+        } else {
+            private_nh.param("replay_file", replay_file, string(""));
+            ROS_INFO_STREAM("Replay records from file: " << replay_file);
         }
-        
-        options_.baudRate = SerialPort::BaudRateMake(br);
-        if (!serial_port_.empty()) {
-            ROS_INFO_STREAM("Accepting packets from serial port: " << serial_port_);
+    }
+
+    int Input::checksum_xor(const char* s) {
+        int c = 0;
+        while (*s)
+            c ^= *s++;
+        return c;
+    }
+
+    unsigned int Input::checksum_arithmetic(unsigned char * s, int length) {
+        unsigned int c = 0;
+        for (int i = 0; i < length; i++) {
+            c += (unsigned int)*(s + i);
         }
-        ROS_INFO_STREAM("BaudRate: " << br);
+        return c;
     }
 
     InputSocket::InputSocket(ros::NodeHandle private_nh) :
-            Input(private_nh) {
+            Input(private_nh, string("online")) {
         if (!serial_port_.empty()) {
             com_ = SerialPort(serial_port_, options_);
         }
+
+        private_nh.param("record", is_record, false);
+        if (is_record) {
+            string rec_path;
+            private_nh.param("record_file_path", rec_path, string("/tmp/record_file.DAT"));
+            if (!protocol_type.compare("NMEA")) {
+                rec_stream.open(rec_path, ios::out);
+            } else if (!protocol_type.compare("OPVT2A")) {
+                rec_stream.open(rec_path, ios::out|ios::binary);
+            } else {
+                ROS_ERROR_STREAM("Unknown protocol. Please check your launchfile.");
+            }
+        }
+
         if (com_.isOpen()) {
             ROS_INFO_STREAM("Connected to serial port \"" << serial_port_ << "\"");
         } else {
@@ -77,6 +105,7 @@ namespace il_driver {
 
     InputSocket::~InputSocket(void) {
         com_.close();
+        rec_stream.close();
     }
 
     int InputSocket::getPackage(ilins_msgs::ilinsNMEA *pkt) {
@@ -89,13 +118,20 @@ namespace il_driver {
                 nbytes = com_.read(raw_data, packet_size_nmea);
             } while (nbytes <= 0);
 
-            if ((size_t) nbytes > 0) {
+            if (rec_stream.is_open()) {
+                rec_stream.write(raw_data, nbytes);
+                rec_stream << flush;
+            } else {
+                ROS_WARN_STREAM("Record file closed.");
+            }
+
+            if ((size_t) nbytes == packet_size_nmea) {
                 if (raw_data[0] != '$') return -1;
                 pch = strrchr(raw_data, '*');
                 *pch = '\0';
                 pch++;
                 pkt->checksum = strtol(pch, &pch, 16);
-                if (pkt->checksum != InputSocket::checksum(raw_data+1)) return -1;                
+                if (pkt->checksum != InputSocket::checksum_xor(raw_data+1)) return -1;                
 
                 pch = strtok(raw_data, ",");
                 if (pch != NULL && !strcmp(pch, "$PAPR")) {
@@ -140,9 +176,10 @@ namespace il_driver {
     }
 
     int InputSocket::getPackage(ilins_msgs::ilinsOPVT2A *pkt) {
-        int nbytes, checksum;
+        int nbytes;
+        unsigned int checksum;
         bool status = true;
-        char *pch;
+        unsigned char *pch;
         unsigned char raw_data[packet_size_opvt2a];
 
         while (flag == 1) {
@@ -150,9 +187,20 @@ namespace il_driver {
                 nbytes = com_.read(raw_data, packet_size_opvt2a);
             } while (nbytes <= 0);
 
+            if (rec_stream.is_open()) {
+                rec_stream.write((const char *)raw_data, nbytes);
+                rec_stream << flush;
+            } else {
+                ROS_WARN_STREAM("Record file closed.");
+            }
+
             if ((size_t) nbytes == packet_size_opvt2a) {
+                if (raw_data[0] != 0xAA && raw_data[1] != 0x55) return -1;
+                pch = raw_data + 2;
+                checksum = Input::checksum_arithmetic(pch, packet_size_opvt2a-4);
                 ros::serialization::IStream in_stream(raw_data, packet_size_opvt2a);
                 ros::serialization::Serializer< ilins_msgs::ilinsOPVT2A >::read(in_stream, *pkt);
+                if (pkt->checksum != checksum) return -1;
                 break;
             }
         }
@@ -164,16 +212,8 @@ namespace il_driver {
         return 0;
     }
 
-    int InputSocket::checksum(const char* s)
-    {
-        int c = 0;
-        while (*s)
-            c ^= *s++;
-        return c;
-    }
-
     InputFile::InputFile(ros::NodeHandle private_nh, string dump_file) : 
-            Input(private_nh) {
+            Input(private_nh, string("offline")) {
         string protocol_type;
         private_nh.param("protocol", protocol_type, string("NMEA"));
         private_nh.param("mode", mode, string("once"));
@@ -184,10 +224,10 @@ namespace il_driver {
             in.open(dump_file.c_str(), ios::in|ios::binary);
         }
 
-        if (!protocol_type.compare("once")) {
-            ROS_INFO_STREAM("Worked in read_once mode.");
+        if (!mode.compare("once")) {
+            ROS_INFO_STREAM("Worked in once_read mode.");
         } else {
-            ROS_INFO_STREAM("Worked in loop mode.");
+            ROS_INFO_STREAM("Worked in loop_read mode.");
         }
 
         if (!in.is_open()) {
@@ -202,7 +242,7 @@ namespace il_driver {
     }
 
     int InputFile::getPackage(ilins_msgs::ilinsNMEA *pkt) {
-        int nbytes, checksum;
+        int checksum;
         char *pch;
         char raw_data[packet_size_nmea];
 
@@ -224,7 +264,7 @@ namespace il_driver {
                 *pch = '\0';
                 pch++;
                 pkt->checksum = strtol(pch, &pch, 16);
-                if (pkt->checksum != InputFile::checksum(raw_data+1)) return -1;                
+                if (pkt->checksum != Input::checksum_xor(raw_data+1)) return -1;                
 
                 pch = strtok(raw_data, ",");
                 if (pch != NULL && !strcmp(pch, "$PAPR")) {
@@ -269,9 +309,9 @@ namespace il_driver {
     }
 
     int InputFile::getPackage(ilins_msgs::ilinsOPVT2A *pkt) {
-        int nbytes, checksum;
+        unsigned int checksum;
         bool status = true;
-        char *pch;
+        unsigned char *pch;
         char raw_data[packet_size_opvt2a];
 
         while (flag == 1) {
@@ -286,9 +326,14 @@ namespace il_driver {
 
             in.read(raw_data, sizeof(raw_data));
 
+            if (raw_data[0] != 0xAA && raw_data[1] != 0x55) return -1;
+            pch = (unsigned char *)raw_data + 2;
+            checksum = Input::checksum_arithmetic(pch, packet_size_opvt2a-4);
             ros::serialization::IStream in_stream((unsigned char *)raw_data, packet_size_opvt2a);
-            ROS_INFO_STREAM(in_stream.getLength());
             ros::serialization::Serializer< ilins_msgs::ilinsOPVT2A >::read(in_stream, *pkt);
+            ROS_INFO_STREAM(checksum << " " << pkt->checksum);
+            if (pkt->checksum != checksum) return -1;
+
             break;
         }
 
@@ -297,13 +342,5 @@ namespace il_driver {
         }
 
         return 0;
-    }
-
-    int InputFile::checksum(const char* s)
-    {
-        int c = 0;
-        while (*s)
-            c ^= *s++;
-        return c;
     }
 }

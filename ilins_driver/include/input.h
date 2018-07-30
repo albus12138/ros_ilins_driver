@@ -24,7 +24,7 @@
 *
 ***************************************************************************
 *
-* Last revision: July 23, 2018
+* Last revision: July 29, 2018
 *
 * For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 *
@@ -50,7 +50,7 @@ namespace il_driver {
 
     class Input {
     public:
-        Input(ros::NodeHandle);
+        Input(ros::NodeHandle, string);
 
         virtual ~Input() {}
 
@@ -58,10 +58,16 @@ namespace il_driver {
 
         virtual int getPackage(ilins_msgs::ilinsOPVT2A *pkt) = 0;
 
+        int checksum_xor(const char *s);
+
+        unsigned int checksum_arithmetic(unsigned char *, int);
+
     protected:
         ros::NodeHandle private_nh_;
         string serial_port_;
         SerialPort::OpenOptions options_ = SerialPort::defaultOptions;
+        string protocol_type;
+        string replay_file;
     };
 
     class InputSocket : public Input {
@@ -73,12 +79,11 @@ namespace il_driver {
         int getPackage(ilins_msgs::ilinsNMEA *pkt);
 
         int getPackage(ilins_msgs::ilinsOPVT2A *pkt);
-    
-        int checksum(const char* s);
 
     private:
         SerialPort com_;
-        
+        bool is_record;
+        ofstream rec_stream;
     };
 
     class InputFile : public Input {
@@ -90,8 +95,6 @@ namespace il_driver {
         int getPackage(ilins_msgs::ilinsNMEA *pkt);
 
         int getPackage(ilins_msgs::ilinsOPVT2A *pkt);
-    
-        int checksum(const char* s);
 
     private:
         ifstream in;
