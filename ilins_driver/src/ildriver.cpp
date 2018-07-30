@@ -24,7 +24,7 @@
 *
 ***************************************************************************
 *
-* Last revision: July 29, 2018
+* Last revision: July 30, 2018
 *
 * For more info and how to use this library, visit: https://github.com/albus12138/ros_ilins_driver
 *
@@ -41,6 +41,7 @@ namespace il_driver {
         private_nh.param("deviceName", deviceName, string(""));
         private_nh.param("baudrate", config_.baudrate, int(230400));
         private_nh.param("replay_file", dump_file, string(""));
+        ROS_INFO_STREAM(dump_file);
         
         switch (config_.baudrate) {
         case 9600:
@@ -92,7 +93,10 @@ namespace il_driver {
 
             ROS_INFO_STREAM("Publish a packet. " << pkt->timestamp);
             output_.publish(pkt);
-
+            
+            ros::Time timestamp(pkt->timestamp / 1000, (pkt->timestamp % 1000) * 1000000);
+            diag_topic_->tick(timestamp);
+            diagnostics_.update();
         } else if (!protocol_type.compare("OPVT2A")) {
             ilins_msgs::ilinsOPVT2APtr pkt(new ilins_msgs::ilinsOPVT2A);
 
@@ -103,12 +107,13 @@ namespace il_driver {
 
             ROS_INFO_STREAM("Publish a packet. " << pkt->timestamp << " " << pkt->voltage);
             output_.publish(pkt);
+
+            ros::Time timestamp(pkt->timestamp / 1000, (pkt->timestamp % 1000) * 1000000);
+            diag_topic_->tick(timestamp);
+            diagnostics_.update();
         } else {
             ROS_ERROR_STREAM("Unknown protocol. Please check your lauchfile.");
         }
-
-        //diag_topic_->tick(nmea->timestamp);
-        //diagnostics_.update();
 
         return true;
     }

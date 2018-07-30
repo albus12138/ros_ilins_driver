@@ -6,7 +6,7 @@
 
     <!-- Replay Config -->
     <param name="mode" value="once"/> <!-- once or loop -->
-    <param name="replay_file" value="/home/r4phael/NMEA_dump_file.nmea"/>
+    <!--param name="replay_file" value="/home/r4phael/NMEA_dump_file.nmea"/-->
 
     <!-- General Config -->
     <param name="deviceName" value="Intertial Labs INS"/>
